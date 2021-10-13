@@ -1,0 +1,36 @@
+#+TITLE: TDT4225 Assignment 3
+#+OPTIONS: toc:nil
+
+*strava* is a Python implementation of the TDT4225 Assignment 3 for fall 2021.
+
+
+* Installation
+Install [[https://git-lfs.github.com/][git lfs]] if not already installed.
+
+#+begin_src bash
+  brew install git-lfs
+  git lfs install # setup git lfs
+#+end_src
+
+Clone the repository.
+
+#+begin_src bash
+  git clone https://github.com/simenojensen/TDT4225_Assignment_2.git
+#+end_src
+
+Unzip the ~dataset.zip~ file.
+
+** Requirements
+- [[https://git-lfs.github.com/][git lfs]]
+- [[https://www.mongodb.com/][MongoDB]] (>= 5.0.3)
+
+See =tdt4225.yml= for python packages. For installation with =conda=:
+#+begin_src bash
+  conda env create -f tdt4225.yml
+#+end_src
+
+* Usage
+#+begin_src bash
+  cd TDT4225_Assignment_3/strava
+  python main.py
+#+end_src
