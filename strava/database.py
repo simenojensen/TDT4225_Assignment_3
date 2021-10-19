@@ -1,47 +1,47 @@
+# -*- coding: utf-8 -*-
+"""Code to create and fill `TDT4225ProjectGroup78` MongoDB database with data.
+
+This module contains code that creates the `TDT4225ProjectGroup78` MongoDB
+database, creates the collections of the `TDT4225ProjectGroup78` database, and
+fills the database with data. The module also provides an interface to queries
+performed on the database.
+
+"""
 import os
 import pandas as pd
 import numpy as np
 from pymongo import MongoClient
-import datetime
+import time
+
+import queries
+import importlib
+importlib.reload(queries)
+
 
 def parse_data():
-    """Parse data from `.plt` files into Pandas DataFrames.
+    """Parse data from `.plt` files into collection dictionaries.
 
     Returns
     -------
-    user_df : Pandas DataFrame
-        Table of user information.
-    activity_df : Pandas DataFrame
-        Table of activity information.
-    trackpoint_df : Pandas DataFrame
-        Table of trackpoint information.
+    user_dict : dict
+        Collection of users.
+    activity_dict : dict
+        Collection of users.
+    trackpoint_dict : dict
+        Collection of trackpoints.
     """
     # Load user data into Pandas DataFrame
     user_ids = sorted(os.listdir("../dataset/Data/"))
-    user_ids = [uid for uid in user_ids if not uid.startswith(".")] # remove Mac Finder generated files
+    # remove Mac Finder generated files
+    user_ids = [uid for uid in user_ids if not uid.startswith(".")]
     # Find labeled users
     with open("../dataset/labeled_ids.txt", "r") as f:
         labeled_users = f.read().splitlines()
     has_labels = [True if uid in labeled_users else False for uid in user_ids]
     user_df = pd.DataFrame({"id": user_ids, "has_labels": has_labels})
 
-    # Activity and Trackpoint columns
-    activity_cols = [
-        "id",
-        "user_id",
-        "transportation_mode",
-        "start_date_time",
-        "end_date_time",
-    ]
-    trackpoint_cols = [
-        "lat",
-        "lon",
-        "ignore",
-        "altitude",
-        "date_days",
-        "date",
-        "time"
-    ]
+    # Trackpoint columns
+    trackpoint_cols = ["lat", "lon", "ignore", "altitude", "date_days", "date", "time"]
 
     # lists to store dataframes
     trackpoint_ll = []
@@ -136,14 +136,40 @@ def parse_data():
 
     # Replace -777 as it is an invalid altitude
     trackpoint_df["altitude"].replace(-777, np.nan, inplace=True)
-    return (user_df, activity_df, trackpoint_df)
+
+    # Changes to data structures for mongoDB
+    # Rename columns
+    user_df = user_df.rename(columns={"id": "_id"})
+    activity_df = activity_df.rename(columns={"id": "_id"})
+    trackpoint_df = trackpoint_df.rename(columns={"id": "_id"})
+
+    # Create list of activity ids in user_df cells
+    # use frozenset as it is hashable, then convert back to list
+    temp_df = activity_df.groupby(["user_id"]).agg(
+        activity_id=pd.NamedAgg(column="_id", aggfunc=frozenset)
+    )
+    user_df = pd.merge(
+        left=user_df, right=temp_df, left_on="_id", right_on=temp_df.index, how="left"
+    )
+    user_df["activity_id"] = user_df["activity_id"].apply(
+        lambda x: list(x) if not pd.isnull(x) else []
+    )
+    # Drop column
+    activity_df = activity_df.drop(columns=["user_id"])
+
+    # Create dicts
+    user_dict = user_df.to_dict("records")
+    activity_dict = activity_df.to_dict("records")
+    trackpoint_dict = trackpoint_df.to_dict("records")
+
+    return (user_dict, activity_dict, trackpoint_dict)
 
 
-def insert_data(USER, PASSWORD, HOST, DB_NAME):
-    """Function to create database, collections and insertion of data.
+def create_user(USER, PASSWORD, HOST, DB_NAME):
+    """Create MongoDB user for the `TDT4225ProjectGroup78` database.
 
-    Drops the `TDT4225ProjectGroup78` database if already exists, then creates
-    the database and inserts the parsed data from the `.plt` files.
+    First drops the database, then creates a user with the given login
+    information.
 
     Parameters
     ----------
@@ -155,23 +181,140 @@ def insert_data(USER, PASSWORD, HOST, DB_NAME):
         The entered MongoDB host.
     DB_NAME : str
         The MongoDB database name (`TDT4225ProjectGroup78`).
+
     """
-
-    user_df, activity_df, trackpoint_df = parse_data()
-
     uri = f"mongodb://{USER}:{PASSWORD}@{HOST}/{DB_NAME}"
-    with MongoClient() as client:
+    with MongoClient(uri) as client:
         # Start by dropping the database.
         client.drop_database(DB_NAME)
 
+        # Add the user to the database.
+        db = client[DB_NAME]
+        db.add_user(USER,PASSWORD)
+
+
+def insert_data(USER, PASSWORD, HOST, DB_NAME):
+    """Create collections and insert data.
+
+    Inserts the parsed data from the `.plt` files into the
+    `TDT4225ProjectGroup78` database.
+
+    Parameters
+    ----------
+    USER : str
+        The entered MongoDB user.
+    PASSWORD : str
+        The entered MongoDB password.
+    HOST : str
+        The entered MongoDB host.
+    DB_NAME : str
+        The MongoDB database name (`TDT4225ProjectGroup78`).
+
+    """
+    start_time = time.time()
+    user_dict, activity_dict, trackpoint_dict = parse_data()
+    print(
+        f"Data parsed successfully. Time taken: {time.time() - start_time:.2f} seconds"
+    )
+
+    uri = f"mongodb://{USER}:{PASSWORD}@{HOST}/{DB_NAME}"
+    with MongoClient(uri) as client:
         # Create database
         db = client[DB_NAME]
 
-        # Create activity collection
-        user_collection = db['user_collection']
+        # Create collections
+        user = db["user"]
+        activity = db["activity"]
+        trackpoint = db["trackpoint"]
 
-        user_df = user_df.rename(columns={'id': '_id'})
+        # Insert data
+        start_time = time.time()
+        user.insert_many(user_dict)
+        print(
+            f"User collection created successfully. Time taken: {time.time() - start_time:.2f} seconds"
+        )
 
-        user_dict = user_df.head(10).to_dict("records")
+        start_time = time.time()
+        activity.insert_many(activity_dict)
+        print(
+            f"Activity collection created successfully. Time taken: {time.time() - start_time:.2f} seconds"
+        )
 
-        user_collection.insert_many(user_dict)
+        start_time = time.time()
+        trackpoint.insert_many(trackpoint_dict)
+        print(
+            f"Trackpoint collection created successfully. Time taken: {time.time() - start_time:.2f} seconds"
+        )
+
+
+def query_database(USER, PASSWORD, HOST, DB_NAME):
+    """Call the different query functions.
+
+    Parameters
+    ----------
+    USER : str
+        The entered MongoDB user
+    PASSWORD : str
+        The entered MongoDB password
+    HOST: str
+        The entered MongoDB host
+    DB_NAME : str
+        The MongoDB database name (`TDT4225ProjectGroup78`)
+    """
+
+    # Instantiate connection
+    uri = f"mongodb://{USER}:{PASSWORD}@{HOST}/{DB_NAME}"
+    with MongoClient(uri) as client:
+
+        db = client["TDT4225ProjectGroup78"]
+        user = db["user"]
+        activity = db["activity"]
+        trackpoint = db["trackpoint"]
+
+        # Query 1
+        print("Query 1:")
+        queries.query_1(user, activity, trackpoint)
+
+        # # Query 2
+        # print("Query 2:")
+        # queries.query_2(user)
+
+        # # Query 3
+        # print("Query 3:")
+        # queries.query_3(user)
+
+        # # Query 4
+        # print("Query 4:")
+        # queries.query_4(activity)
+
+        # # Query 5
+        # print("Query 5:")
+        # queries.query_5(activity)
+
+        # # Query 6
+        # print("Query 6:")
+        # queries.query_6(user, trackpoint)
+
+        # # Query 7
+        # print("Query 7:")
+        # queries.query_7(user, activity)
+
+        # # Query 8
+        # print("Query 8:")
+        # queries.query_8(activity)
+
+        # # Query 9
+        # print("Query 9:")
+        # queries.query_9(user, activity)
+
+        # # Query 10
+        # print("Query 10:")
+        # queries.query_10(user, activity, trackpoint)
+
+        # Query 11
+        # print("Query 11:")
+        # queries.query_11(trackpoint)
+
+        # Query 12
+        # print("Query 12:")
+        # queries.query_12(trackpoint)
