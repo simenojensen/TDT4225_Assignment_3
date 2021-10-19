@@ -6,13 +6,7 @@ Author: Simen Omholt-Jensen
 
 This module contains code that runs the strava interface.
 """
-import sys
 import getpass
-
-import database
-
-import importlib
-importlib.reload(database)
 from database import insert_data
 from database import query_database
 from database import create_user
@@ -28,10 +22,8 @@ def main():
 
     """
     # Prompt the user for their MongoDB login inforamtion
-    # USER = input("Enter MongoDB user: ")
-    USER = 'simen'
-    # PASSWORD = getpass.getpass(prompt="Enter MongoDB password: ")
-    PASSWORD = "4nz984UUlh2kCcbt68k"
+    USER = input("Enter MongoDB user: ")
+    PASSWORD = getpass.getpass(prompt="Enter MongoDB password: ")
 
     # Database name
     DB_NAME = "TDT4225ProjectGroup78"
@@ -40,10 +32,10 @@ def main():
     HOST = "localhost"
 
     # Create user
-    # create_user(USER, PASSWORD, HOST,  DB_NAME)
+    create_user(USER, PASSWORD, HOST,  DB_NAME)
 
     # create strava database
-    # insert_data(USER, PASSWORD, HOST,  DB_NAME)
+    insert_data(USER, PASSWORD, HOST,  DB_NAME)
 
     # Perform queries
     query_database(USER, PASSWORD, HOST,  DB_NAME)

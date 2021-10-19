@@ -5,7 +5,6 @@ This module contains code that queries the `TDT4225ProjectGroup78` MongoDB
 database, to answer the questions given in the assignment text. The results are
 then printed to the console.
 """
-
 import pandas as pd
 import numpy as np
 from haversine import haversine_vector, Unit

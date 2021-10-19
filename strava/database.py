@@ -12,10 +12,7 @@ import pandas as pd
 import numpy as np
 from pymongo import MongoClient
 import time
-
 import queries
-import importlib
-importlib.reload(queries)
 
 
 def parse_data():
@@ -212,6 +209,7 @@ def insert_data(USER, PASSWORD, HOST, DB_NAME):
 
     """
     start_time = time.time()
+    print('Parsing data...')
     user_dict, activity_dict, trackpoint_dict = parse_data()
     print(
         f"Data parsed successfully. Time taken: {time.time() - start_time:.2f} seconds"
@@ -275,46 +273,46 @@ def query_database(USER, PASSWORD, HOST, DB_NAME):
         print("Query 1:")
         queries.query_1(user, activity, trackpoint)
 
-        # # Query 2
-        # print("Query 2:")
-        # queries.query_2(user)
+        # Query 2
+        print("Query 2:")
+        queries.query_2(user)
 
-        # # Query 3
-        # print("Query 3:")
-        # queries.query_3(user)
+        # Query 3
+        print("Query 3:")
+        queries.query_3(user)
 
-        # # Query 4
-        # print("Query 4:")
-        # queries.query_4(activity)
+        # Query 4
+        print("Query 4:")
+        queries.query_4(activity)
 
-        # # Query 5
-        # print("Query 5:")
-        # queries.query_5(activity)
+        # Query 5
+        print("Query 5:")
+        queries.query_5(activity)
 
-        # # Query 6
-        # print("Query 6:")
-        # queries.query_6(user, trackpoint)
+        # Query 6
+        print("Query 6:")
+        queries.query_6(user, trackpoint)
 
-        # # Query 7
-        # print("Query 7:")
-        # queries.query_7(user, activity)
+        # Query 7
+        print("Query 7:")
+        queries.query_7(user, activity)
 
-        # # Query 8
-        # print("Query 8:")
-        # queries.query_8(activity)
+        # Query 8
+        print("Query 8:")
+        queries.query_8(activity)
 
-        # # Query 9
-        # print("Query 9:")
-        # queries.query_9(user, activity)
+        # Query 9
+        print("Query 9:")
+        queries.query_9(user, activity)
 
-        # # Query 10
-        # print("Query 10:")
-        # queries.query_10(user, activity, trackpoint)
+        # Query 10
+        print("Query 10:")
+        queries.query_10(user, activity, trackpoint)
 
         # Query 11
-        # print("Query 11:")
-        # queries.query_11(trackpoint)
+        print("Query 11:")
+        queries.query_11(trackpoint)
 
         # Query 12
-        # print("Query 12:")
-        # queries.query_12(trackpoint)
+        print("Query 12:")
+        queries.query_12(trackpoint)
